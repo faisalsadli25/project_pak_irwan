@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Dashboard Mobile Ready</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: #f1f5f9; 
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        .white-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .yellow-accent { background: #facc15; }
+        
+        /* Scrollbar untuk Desktop */
+        @media (min-width: 768px) {
+            body { overflow: hidden; height: 100vh; }
+            .custom-scroll::-webkit-scrollbar { width: 5px; }
+            .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+            .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        }
+
+        .row-hover:hover { background: #fefce8; }
+        
+        /* Memastikan kolom store tetap terbaca di HP saat di-scroll */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 10;
+            box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="p-3 md:p-6 flex flex-col">
+
+    <div class="max-w-[1600px] mx-auto w-full flex flex-col h-full">
+        
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="yellow-accent p-2.5 rounded-xl shadow-md">
+                    <i class="fas fa-chart-line text-slate-900 text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-extrabold text-slate-900 uppercase leading-none">Sales <span class="text-yellow-500">Analytics</span></h1>
+                    <p id="last-update" class="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1 italic">Syncing...</p>
+                </div>
+            </div>
+            <div class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 text-[10px] font-bold uppercase flex items-center gap-2 self-end md:self-auto">
+                <span class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span> Live
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+            <div class="md:col-span-12 lg:col-span-6 grid grid-cols-2 gap-4 order-2 lg:order-1">
+                <div class="white-card p-4 border-b-4 border-b-yellow-400">
+                    <p class="text-[9px] text-slate-400 font-black uppercase">Target GA+CPP</p>
+                    <h2 id="sum-ga" class="text-xl md:text-2xl text-slate-800 font-black tracking-tighter">0</h2>
+                </div>
+                <div class="white-card p-4 bg-yellow-400 border-none shadow-lg shadow-yellow-100">
+                    <p class="text-[9px] text-slate-800 font-black uppercase opacity-60">Revenue</p>
+                    <h2 id="sum-rev" class="text-xl md:text-2xl text-slate-900 font-black tracking-tighter">0</h2>
+                </div>
+            </div>
+
+            <div class="md:col-span-6 lg:col-span-3 white-card p-4 border-l-4 border-l-emerald-500 flex items-center gap-3 order-1 lg:order-2">
+                <div class="bg-emerald-100 p-2 rounded-lg text-emerald-600"><i class="fas fa-trophy"></i></div>
+                <div class="overflow-hidden">
+                    <p class="text-[8px] text-emerald-600 font-black uppercase">Top Performer</p>
+                    <h4 id="best-name" class="text-xs font-bold text-slate-900 truncate uppercase">-</h4>
+                    <p id="best-val" class="text-sm font-black text-slate-800">Rp 0</p>
+                </div>
+            </div>
+
+            <div class="md:col-span-6 lg:col-span-3 white-card p-4 border-l-4 border-l-orange-500 flex items-center gap-3 order-1 lg:order-3">
+                <div class="bg-orange-100 p-2 rounded-lg text-orange-600"><i class="fas fa-fire"></i></div>
+                <div class="overflow-hidden">
+                    <p class="text-[8px] text-orange-600 font-black uppercase">Low (Active)</p>
+                    <h4 id="worst-name" class="text-xs font-bold text-slate-900 truncate uppercase">-</h4>
+                    <p id="worst-val" class="text-sm font-black text-slate-800">Rp 0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="white-card flex-1 overflow-hidden flex flex-col shadow-xl">
+            <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <h3 class="text-[10px] font-black text-slate-500 tracking-widest uppercase">Performance Detail</h3>
+                <div class="relative w-full sm:w-64">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                    <input type="text" id="search-input" placeholder="Search..." 
+                        class="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2 text-xs outline-none focus:border-yellow-400">
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-auto custom-scroll">
+                <table class="w-full text-left min-w-[600px] border-separate border-spacing-0">
+                    <thead class="text-[9px] text-slate-400 font-black uppercase tracking-widest bg-slate-50 sticky top-0 z-20">
+                        <tr>
+                            <th class="px-4 py-3 sticky-col bg-slate-50">Store</th>
+                            <th class="px-4 py-3">Promotor</th>
+                            <th class="px-4 py-3 text-right">Target GA</th>
+                            <th class="px-4 py-3 text-right">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-tbody" class="divide-y divide-slate-100 text-[12px] text-slate-700 font-semibold">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer class="mt-4 py-2 text-[8px] text-slate-400 font-bold uppercase tracking-[0.2em] flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>by M.Faisal.Sadli &copy;2026</span>
+            <span id="sync-time">Last Update: -</span>
+        </footer>
+    </div>
+
+    <script>
+        const SPREADSHEET_ID = '1h6rOUt-qCUCm-3rC4FMQVxGBkAAp9h185zX9e-WW5ws';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
+
+        async function updateDashboard() {
+            try {
+                const response = await fetch(CSV_URL);
+                const csvText = await response.text();
+                Papa.parse(csvText, {
+                    header: false,
+                    complete: (results) => processSheet(results.data)
+                });
+            } catch (err) { console.error("Sync Error"); }
+        }
+
+        function processSheet(rawData) {
+            let hIndex = rawData.findIndex(row => row.join('').includes('STORE'));
+            if (hIndex === -1) return;
+
+            const headers = rawData[hIndex].map(h => h.trim().toUpperCase());
+            const rows = rawData.slice(hIndex + 1);
+
+            const iStore = headers.indexOf('STORE');
+            const iProm = headers.indexOf('PROMOTOR');
+            const iGA = headers.indexOf('TARGET GA+CPP');
+            const iRev = headers.indexOf('TARGET GUARANTEED REVENUE');
+
+            let totalGA = 0, totalRev = 0;
+            let listData = [];
+
+            rows.forEach(row => {
+                if (!row[iStore] || row[iStore] === "") return;
+                const ga = parseInt(row[iGA]?.toString().replace(/\D/g, '')) || 0;
+                const rev = parseInt(row[iRev]?.toString().replace(/\D/g, '')) || 0;
+                listData.push({ store: row[iStore], promotor: row[iProm], ga, rev });
+                totalGA += ga; totalRev += rev;
+            });
+
+            if(listData.length > 0) {
+                const sortedBest = [...listData].sort((a, b) => b.rev - a.rev);
+                document.getElementById('best-name').innerText = sortedBest[0].promotor;
+                document.getElementById('best-val').innerText = 'Rp ' + sortedBest[0].rev.toLocaleString('id-ID');
+                
+                const activePerformers = listData.filter(item => item.rev > 0);
+                let worst = activePerformers.length > 0 ? activePerformers.sort((a, b) => a.rev - b.rev)[0] : sortedBest[sortedBest.length - 1];
+                
+                document.getElementById('worst-name').innerText = worst.promotor;
+                document.getElementById('worst-val').innerText = 'Rp ' + worst.rev.toLocaleString('id-ID');
+            }
+
+            document.getElementById('sum-ga').innerText = totalGA.toLocaleString('id-ID');
+            document.getElementById('sum-rev').innerText = 'Rp ' + totalRev.toLocaleString('id-ID');
+
+            let html = '';
+            listData.forEach(item => {
+                const revClass = item.rev === 0 ? 'text-red-500 font-bold' : 'text-slate-900 font-black';
+                html += `
+                    <tr class="row-hover">
+                        <td class="px-4 py-3 sticky-col font-extrabold text-slate-800 uppercase truncate border-r border-slate-50">${item.store}</td>
+                        <td class="px-4 py-3 text-slate-500 font-medium uppercase truncate">${item.promotor}</td>
+                        <td class="px-4 py-3 text-right font-mono">${item.ga.toLocaleString('id-ID')}</td>
+                        <td class="px-4 py-3 text-right font-mono ${revClass}">Rp ${item.rev.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('data-tbody').innerHTML = html;
+            document.getElementById('sync-time').innerText = 'Last Update: ' + new Date().toLocaleTimeString();
+        }
+
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#data-tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+            });
+        });
+
+        updateDashboard();
+        setInterval(updateDashboard, 30000);
+    </script>
+</body>
+</html>
